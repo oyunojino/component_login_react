@@ -35,7 +35,21 @@ function Login() {
         // 요청에 사용된 값과 응답값 콘솔 출력
         console.log("로그인 요청 데이터:", { account, password });
         console.log("로그인 응답 데이터:", data);
-        alert("로그인 성공: " + data.message);
+        // 로그인 성공 시 받아온 데이터로 요청 (Bearer 토큰 사용)
+        try {
+          const response = await fetch("/api/authentication", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${data.accessToken}`,
+              "Content-Type": "application/json",
+            },
+          });
+          const resultData = await response.json();
+          console.log("/api/authentication 응답 데이터:", resultData);
+          navigate("/home", { state: { resultData } });
+        } catch (aaaErr) {
+          console.error("/api/authentication 요청 실패:", aaaErr);
+        }
       }
     } catch (err) {
       setError("서버 오류가 발생했습니다.");
