@@ -18,6 +18,18 @@ function Register() {
     alert(`회원가입 시도: ${username}, ${name}`);
   };
 
+  // 텍스트 버튼 스타일 (Login.js와 동일)
+  const textBtnStyle = {
+    background: "none",
+    border: "none",
+    color: "#1976d2",
+    cursor: "pointer",
+    padding: 0,
+    marginTop: 12,
+    fontSize: "15px",
+    textDecoration: "underline",
+  };
+
   return (
     <div className="login-container">
       <form className="login-form" onSubmit={handleRegister}>
@@ -44,8 +56,7 @@ function Register() {
         <button type="submit">회원가입</button>
         <button
           type="button"
-          className="login-btn"
-          style={{ marginTop: 12 }}
+          style={textBtnStyle}
           onClick={() => navigate("/login")}
         >
           로그인
