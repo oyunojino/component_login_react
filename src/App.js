@@ -4,10 +4,10 @@ import {
   Routes,
   Route,
   Navigate,
-  useNavigate,
 } from "react-router-dom";
 import Login from "./layout/Login";
 import Register from "./layout/Register";
+import Home from "./layout/Home";
 
 function App() {
   return (
@@ -16,6 +16,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/home" element={<Home />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
