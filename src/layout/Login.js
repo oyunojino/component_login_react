@@ -5,16 +5,43 @@ function Login() {
   const [account, setAccunt] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!account || !password) {
       setError("아이디와 비밀번호를 모두 입력하세요.");
       return;
     }
     setError("");
-    alert(`로그인 시도: ${account}`);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/user/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          account,
+          password,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.message || "로그인 실패");
+      } else {
+        const data = await response.json();
+        // 요청에 사용된 값과 응답값 콘솔 출력
+        console.log("로그인 요청 데이터:", { account, password });
+        console.log("로그인 응답 데이터:", data);
+        alert("로그인 성공: " + data.message);
+      }
+    } catch (err) {
+      setError("서버 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 텍스트 버튼 스타일
@@ -52,7 +79,9 @@ function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <div className="error-message">{error}</div>}
-        <button type="submit">로그인</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "로그인 중..." : "로그인"}
+        </button>
         <div
           style={{
             display: "flex",
