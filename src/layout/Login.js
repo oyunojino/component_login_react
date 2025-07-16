@@ -7,6 +7,7 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,7 +18,7 @@ function Login() {
     setError("");
     setLoading(true);
     try {
-      const response = await fetch("/api/user/login", {
+      const response = await fetch(`${API_BASE_URL}/api/user/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,7 +38,7 @@ function Login() {
         console.log("로그인 응답 데이터:", data);
         // 로그인 성공 시 받아온 데이터로 요청 (Bearer 토큰 사용)
         try {
-          const response = await fetch("/api/authentication", {
+          const response = await fetch(`${API_BASE_URL}/api/authentication`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${data.accessToken}`,
