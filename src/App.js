@@ -1,7 +1,12 @@
 import "./App.css";
+import Login from "./layout/Login";
 
 function App() {
-  return <div className="App">{/* 여기에 컴포넌트 내용을 작성하세요 */}</div>;
+  return (
+    <div className="App">
+      <Login />
+    </div>
+  );
 }
 
 export default App;
