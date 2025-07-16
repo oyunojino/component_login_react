@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 
 function Login() {
-  const [email, setEmail] = useState("");
+  const [account, setAccunt] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError("이메일과 비밀번호를 모두 입력하세요.");
+    if (!account || !password) {
+      setError("아이디와 비밀번호를 모두 입력하세요.");
       return;
     }
     setError("");
-    alert(`로그인 시도: ${email}`);
+    alert(`로그인 시도: ${account}`);
   };
 
   return (
@@ -20,10 +20,10 @@ function Login() {
       <form className="login-form" onSubmit={handleLogin}>
         <h2>로그인</h2>
         <input
-          type="email"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          placeholder="아이디"
+          value={account}
+          onChange={(e) => setAccunt(e.target.value)}
         />
         <input
           type="password"
