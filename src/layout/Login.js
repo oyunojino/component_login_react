@@ -34,8 +34,13 @@ function Login() {
       } else {
         const data = await response.json();
         // 요청에 사용된 값과 응답값 콘솔 출력
-        console.log("로그인 요청 데이터:", { account, password });
-        console.log("로그인 응답 데이터:", data);
+        // console.log("로그인 요청 데이터:", { account, password });
+        // console.log("로그인 응답 데이터:", data);
+
+        const userInfo = data;
+        // userInfo를 sessionStorage에 저장
+        sessionStorage.setItem("userInfo", JSON.stringify(userInfo));
+
         // 로그인 성공 시 받아온 데이터로 요청 (Bearer 토큰 사용)
         try {
           const response = await fetch(`${API_BASE_URL}/api/authentication`, {
@@ -46,7 +51,7 @@ function Login() {
             },
           });
           const resultData = await response.json();
-          console.log("/api/authentication 응답 데이터:", resultData);
+          // console.log("/api/authentication 응답 데이터:", resultData);
           navigate("/home", { state: { resultData } });
         } catch (aaaErr) {
           console.error("/api/authentication 요청 실패:", aaaErr);

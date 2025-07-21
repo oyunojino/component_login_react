@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Register() {
-  const [username, setUsername] = useState("");
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -12,7 +12,7 @@ function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username || !password || !name) {
+    if (!account || !password || !name) {
       setError("아이디, 비밀번호, 이름을 모두 입력하세요.");
       return;
     }
@@ -25,7 +25,7 @@ function Register() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username,
+          account,
           password,
           name,
           userGroup: 0,
@@ -33,19 +33,17 @@ function Register() {
       });
       const data = await response.json();
       // 요청 데이터와 응답값 콘솔 출력
-      console.log("회원가입 요청 데이터:", {
-        username,
-        password,
-        name,
-        userGroup: 0,
-      });
-      console.log("회원가입 응답 데이터:", data);
+      //   console.log("회원가입 요청 데이터:", {
+      //     account,
+      //     password,
+      //     name,
+      //     userGroup: 0,
+      //   });
+      //   console.log("회원가입 응답 데이터:", data);
       if (!response.ok) {
         setError(data.message || "회원가입 실패");
-      } else {
-        alert("회원가입 성공: " + data.message);
-        // 예시: navigate("/login");
       }
+      navigate("/login");
     } catch (err) {
       setError("서버 오류가 발생했습니다.");
     } finally {
@@ -72,8 +70,8 @@ function Register() {
         <input
           type="text"
           placeholder="아이디"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={account}
+          onChange={(e) => setAccount(e.target.value)}
         />
         <input
           type="password"
