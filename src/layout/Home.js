@@ -150,7 +150,7 @@ function Home() {
 
       <pre
         style={{
-          background: "#f5f5f5",
+          background: "#f0f4fa",
           padding: 16,
           borderRadius: 8,
           width: 400,
