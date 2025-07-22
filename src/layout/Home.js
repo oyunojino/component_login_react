@@ -1,90 +1,75 @@
 /* global BigInt */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function Home() {
-  // 1. 라우터 및 기본 정보 세팅
   const location = useLocation();
   const resultData = location.state?.resultData;
-  const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "null");
-  const accessToken = userInfo?.accessToken;
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
   const navigate = useNavigate();
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 
-  // 2. 인증 토큰 파싱(JWT에서 payload 추출 및 Ticks 값 추출)
-  let ticks = null;
-  let payload = null;
-  if (accessToken) {
+  // userInfo 파싱
+  const userInfo = useMemo(() => {
     try {
-      // JWT의 payload 부분을 base64 디코딩
+      return JSON.parse(sessionStorage.getItem("userInfo")) || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const accessToken = userInfo?.accessToken;
+
+  // 상태 관리
+  const [ticks, setTicks] = useState(null);
+  const [payload, setPayload] = useState(null);
+
+  // JWT 파싱 후 ticks 추출
+  useEffect(() => {
+    if (!accessToken) return;
+    try {
       const base64Url = accessToken.split(".")[1];
       const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const jsonPayload = decodeURIComponent(
         atob(base64)
           .split("")
-          .map(function (c) {
-            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-          })
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
           .join("")
       );
-      payload = JSON.parse(jsonPayload);
-      if (payload.Ticks) {
-        ticks = payload.Ticks;
-      }
+      const parsed = JSON.parse(jsonPayload);
+      setPayload(parsed);
+      if (parsed?.Ticks) setTicks(parsed.Ticks);
     } catch (e) {
-      // 파싱 실패 시 무시
+      console.error("JWT 파싱 실패", e);
     }
-  }
+  }, [accessToken]);
 
-  // 3. 남은 시간 계산 함수 (Ticks → 남은 시간 문자열)
-  const getRemainText = (ticks) => {
+  // Ticks → 만료 일시 Date 객체 반환 (UTC 기준)
+  const ticksToUtcDate = (ticksStr) => {
     try {
-      const getBigInt = (v) => {
-        if (typeof BigInt !== "undefined") return BigInt(v);
-        if (
-          typeof window !== "undefined" &&
-          typeof window.BigInt !== "undefined"
-        )
-          return window.BigInt(v);
-        throw new Error("BigInt is not supported");
-      };
-      const ticksBigInt = getBigInt(ticks);
-      const epochTicks = getBigInt("621355968000000000");
-      const msSinceEpoch = Number(
-        (ticksBigInt - epochTicks) / getBigInt(10000)
-      );
-      const now = new Date().getTime();
-      const diffMs = msSinceEpoch - now;
-      if (diffMs > 0) {
-        const diffSec = Math.floor(diffMs / 1000);
-        const hours = Math.floor((diffSec % (3600 * 24)) / 3600);
-        const minutes = Math.floor((diffSec % 3600) / 60);
-        const seconds = diffSec % 60;
-        return ` ${hours}시간 ${minutes}분 ${seconds}초`;
-      } else {
-        return "만료됨";
-      }
+      const ticks = BigInt(ticksStr);
+      const epochTicks = BigInt("621355968000000000");
+      const msSinceEpoch = (ticks - epochTicks) / BigInt(10000);
+      return new Date(Number(msSinceEpoch));
     } catch {
-      return "";
+      return null;
     }
   };
 
-  // 4. 1초마다 남은 시간 갱신 (state 관리)
-  const [ticksRemainText, setTicksRemainText] = useState(
-    ticks ? getRemainText(ticks) : ""
-  );
+  // 남은 시간 업데이트
   useEffect(() => {
     if (!ticks) return;
-    setTicksRemainText(getRemainText(ticks));
-    const interval = setInterval(() => {
-      setTicksRemainText(getRemainText(ticks));
-    }, 1000);
+
+    const updateRemain = () => {
+      const expireDate = ticksToUtcDate(ticks);
+    };
+
+    updateRemain();
+    const interval = setInterval(updateRemain, 1000);
     return () => clearInterval(interval);
   }, [ticks]);
 
-  // 5. access token 갱신 함수 (refresh token 사용)
+  // Refresh Token 사용 토큰 갱신
   const handleRefreshToken = async () => {
-    const userInfo = JSON.parse(sessionStorage.getItem("userInfo") || "null");
     const refreshToken = userInfo?.refreshToken;
     if (!refreshToken) {
       alert("refresh token이 없습니다. 다시 로그인 해주세요.");
@@ -103,10 +88,9 @@ function Home() {
           body: JSON.stringify({ refreshToken }),
         }
       );
+
       if (response.ok) {
         const data = await response.json();
-        console.log("data : ", data);
-        debugger;
         sessionStorage.setItem("userInfo", JSON.stringify(data));
         window.location.reload();
       } else {
@@ -114,14 +98,14 @@ function Home() {
         sessionStorage.removeItem("userInfo");
         navigate("/login");
       }
-    } catch (e) {
+    } catch {
       alert("토큰 갱신 중 오류 발생");
       sessionStorage.removeItem("userInfo");
       navigate("/login");
     }
   };
 
-  // 6. 로그아웃 함수
+  // 로그아웃
   const handleLogout = async () => {
     const confirmLogout = window.confirm("로그아웃 하시겠습니까?");
     if (!confirmLogout) return;
@@ -138,11 +122,117 @@ function Home() {
         alert("로그아웃을 실패했습니다!");
         return;
       }
+      sessionStorage.removeItem("userInfo");
       navigate("/login");
-    } catch (err) {
+    } catch {
       alert("API 요청 중 오류 발생");
     }
   };
+
+  // Ticks → 만료 일시 포맷 (UTC 기준)
+  const formatExpireDateUtc = (ticksStr) => {
+    try {
+      const ticks = BigInt(ticksStr);
+      const epochTicks = BigInt("621355968000000000");
+      const msSinceEpoch = (ticks - epochTicks) / BigInt(10000);
+      const date = new Date(Number(msSinceEpoch));
+      const pad = (n) => n.toString().padStart(2, "0");
+      const year = date.getUTCFullYear();
+      const month = pad(date.getUTCMonth() + 1);
+      const day = pad(date.getUTCDate());
+      const hours = pad(date.getUTCHours());
+      const minutes = pad(date.getUTCMinutes());
+      const seconds = pad(date.getUTCSeconds());
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return "Invalid Ticks";
+    }
+  };
+
+  // 남은 시간 계산 함수 (UTC 기준)
+  const getRemainTextUtc = (ticksStr) => {
+    try {
+      const expireDate = ticksToUtcDate(ticksStr);
+      if (!expireDate) return "";
+      const now = new Date();
+      const diffMs = expireDate.getTime() - now.getTime();
+      if (diffMs <= 0) return "만료됨";
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600) - 9;
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      let result = "";
+      if (days > 0) result += `${days}일 `;
+      result += `${hours}시간 ${minutes}분 ${seconds}초`;
+      return result;
+    } catch {
+      return "";
+    }
+  };
+
+  // 만료 일시와 남은 시간 상태 추가
+  const [expireDateStr, setExpireDateStr] = useState("");
+  const [remainText, setRemainText] = useState("");
+
+  useEffect(() => {
+    if (!ticks) return;
+    const updateExpireInfo = () => {
+      setExpireDateStr(formatExpireDateUtc(ticks));
+      setRemainText(getRemainTextUtc(ticks));
+    };
+    updateExpireInfo();
+    const interval = setInterval(updateExpireInfo, 1000);
+    return () => clearInterval(interval);
+  }, [ticks]);
+
+  // resultData 상태로 관리
+  const [resultDataState, setResultDataState] = useState(resultData);
+
+  // resultData 새로고침 함수
+  const handleRefreshResultData = async () => {
+    if (!accessToken) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/authentication`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setResultDataState(data);
+      } else {
+        alert("데이터를 불러오지 못했습니다.");
+      }
+    } catch {
+      alert("새로고침 중 오류 발생");
+    }
+  };
+
+  const expiredRef = useRef(false);
+  useEffect(() => {
+    if (!ticks) return;
+    let expireDate = ticksToUtcDate(ticks);
+    if (expireDate) {
+      expireDate = new Date(expireDate.getTime() - 9 * 60 * 60 * 1000); // 9시간 빼기
+    }
+    expiredRef.current = false; // ticks가 바뀌면 초기화
+    const checkExpire = () => {
+      if (expiredRef.current) return;
+      const now = new Date();
+      if (expireDate && now > expireDate) {
+        expiredRef.current = true;
+        alert("세션이 만료되었습니다. 다시 로그인 해주세요.");
+        sessionStorage.removeItem("userInfo");
+        navigate("/login");
+      }
+    };
+    checkExpire();
+    const interval = setInterval(checkExpire, 1000);
+    return () => clearInterval(interval);
+  }, [ticks, navigate]);
 
   return (
     <div style={{ padding: 32 }}>
@@ -158,11 +248,27 @@ function Home() {
           overflow: "auto",
         }}
       >
-        {resultData
-          ? JSON.stringify(resultData, null, 2).replace(/\"/g, "")
+        {resultDataState
+          ? JSON.stringify(resultDataState, null, 2).replace(/"/g, "")
           : "전달된 데이터가 없습니다."}
       </pre>
-      {/* access token 정보 표시 */}
+      <button
+        style={{
+          background: "#1976d2",
+          border: "none",
+          color: "#fff",
+          cursor: "pointer",
+          padding: "10px 18px",
+          fontSize: 14,
+          fontWeight: 500,
+          marginBottom: 16,
+          width: "100%",
+        }}
+        onClick={handleRefreshResultData}
+      >
+        새로고침
+      </button>
+
       {accessToken && payload && (
         <div
           style={{
@@ -177,34 +283,27 @@ function Home() {
             boxSizing: "border-box",
           }}
         >
-          {/* 만료까지 남은 시간 강조 표시 */}
-          {ticksRemainText && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <span
-                style={{
-                  fontSize: 13,
-                  color: "#888",
-                  fontWeight: 400,
-                  marginBottom: 2,
-                }}
-              >
-                만료까지 남은 시간
-              </span>
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: ticksRemainText.includes("만료")
-                    ? "#d32f2f"
-                    : "#1976d2",
-                  letterSpacing: 1,
-                }}
-              >
-                {ticksRemainText}
-              </span>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ color: "#888", fontWeight: 500, fontSize: 14 }}>
+              만료 일시
             </div>
-          )}
-          {/* 토큰 갱신 버튼 */}
+            <div style={{ color: "#1976d2", fontWeight: 500, fontSize: 16 }}>
+              {expireDateStr}
+            </div>
+            <div
+              style={{
+                color: "#888",
+                fontWeight: 500,
+                fontSize: 14,
+                marginTop: 8,
+              }}
+            >
+              남은 시간
+            </div>
+            <div style={{ color: "#1976d2", fontWeight: 500, fontSize: 16 }}>
+              {remainText}
+            </div>
+          </div>
           <button
             style={{
               background: "#1976d2",
@@ -224,6 +323,7 @@ function Home() {
           </button>
         </div>
       )}
+
       <button
         style={{
           background: "none",
